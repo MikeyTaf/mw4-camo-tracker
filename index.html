@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MW4 Camos">
+<meta name="theme-color" content="#f8f6ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#21241e" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>MW4 Camo Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* Layout: field ledger — sticky progress header, class sections each holding the Platinum gate and a grid of weapon cards (military pips → specials → gold → harmonic break), then account-wide gates and mastery tracks. */
+:root{
+  --bg:#eeebe1; --surface:#f8f6ef; --line:#d4cfbd; --fg:#23251e; --muted:#6a6c5d;
+  --olive:#4f5a2e; --olive-soft:#e2e3cc;
+  --gold:#a67c0e; --gold-soft:#f3e6bd;
+  --plat:#5f7786; --plat-soft:#dde6ea;
+  --hb:#7c4bb0; --hb-soft:#ebe0f5;
+  --div:#c2410c; --div-soft:#fbe2d3;
+  --pip:#fffdf6;
+  --f-display:"Chakra Petch","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#181a16; --surface:#21241e; --line:#363a2f; --fg:#e8e6da; --muted:#9a9c89;
+  --olive:#a9b86b; --olive-soft:#2e3423;
+  --gold:#e3b53a; --gold-soft:#3b3218;
+  --plat:#a9c0cd; --plat-soft:#27323a;
+  --hb:#b98be6; --hb-soft:#33263f;
+  --div:#f0874a; --div-soft:#3d2518;
+  --pip:#191b16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#181a16; --surface:#21241e; --line:#363a2f; --fg:#e8e6da; --muted:#9a9c89;
+  --olive:#a9b86b; --olive-soft:#2e3423;
+  --gold:#e3b53a; --gold-soft:#3b3218;
+  --plat:#a9c0cd; --plat-soft:#27323a;
+  --hb:#b98be6; --hb-soft:#33263f;
+  --div:#f0874a; --div-soft:#3d2518;
+  --pip:#191b16; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{padding-block:14px;display:flex;flex-direction:column;gap:12px}
+.titlerow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-size:26px;font-weight:700;text-transform:uppercase}
+h1 span{color:var(--olive)}
+.save{font-size:12px;color:var(--muted)}
+.save b{font-weight:500;color:var(--fg)}
+.ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rung{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rung .lab{display:flex;justify-content:space-between;gap:6px;font-size:12px}
+.rung .lab .n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;transition:width .3s}
+.r-gold i{background:var(--gold)} .r-plat i{background:var(--plat)} .r-hb i{background:var(--hb)} .r-mil i{background:var(--olive)}
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font-size:12px;font-weight:500;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.spacer{flex:1}
+@media (max-width:640px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))} h1{font-size:21px}}
+
+main .wrap{padding-block:24px 48px;display:flex;flex-direction:column;gap:36px}
+
+/* class sections */
+.cls{display:flex;flex-direction:column;gap:12px}
+.clshead{display:flex;flex-direction:column;gap:10px;padding-bottom:10px;border-bottom:2px solid var(--fg)}
+.clstop{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+.clshead h2{font-size:20px;text-transform:uppercase}
+.clshead .count{font-size:12px;color:var(--muted)}
+.gates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:700px){.gates{grid-template-columns:1fr}}
+.gatebox{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:start;padding:8px 10px 8px 8px;border-radius:6px;font-size:13px}
+.gatebox.plat{background:var(--plat-soft)}
+.gatebox.hbinfo{background:var(--hb-soft);grid-template-columns:minmax(0,1fr)}
+.gatebox b{font-weight:600}
+.gatebox small{display:block;color:var(--muted);font-size:12px}
+
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card.done{border-color:var(--hb);box-shadow:inset 3px 0 0 var(--hb)}
+.chead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px}
+.wname{font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.2}
+.tag{font:500 10px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:var(--olive-soft);color:var(--olive);margin-left:6px;vertical-align:2px}
+.next{font-size:12.5px;color:var(--muted)}
+.next b{color:var(--fg);font-weight:600}
+.grp{display:flex;flex-direction:column;gap:6px}
+.pips{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.pip{height:34px;border-radius:4px;border:1.5px solid var(--line);background:var(--pip);color:var(--fg);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1}
+.pip small{font:500 8.5px var(--f-mono);letter-spacing:.04em;color:var(--muted)}
+.pip span{font:500 12.5px var(--f-mono);font-variant-numeric:tabular-nums}
+.pip.on{background:var(--olive);border-color:var(--olive)}
+.pip.on span,.pip.on small{color:var(--surface)}
+
+.row{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:start}
+.tick{width:26px;height:26px;border-radius:4px;border:1.5px solid var(--line);background:var(--pip);cursor:pointer;font:600 13px var(--f-mono);color:var(--surface);padding:0;display:grid;place-items:center}
+.tick.on{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.tick.gold.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.tick.hb.on{background:var(--hb);border-color:var(--hb);color:#fff}
+.tick.plat.on{background:var(--plat);border-color:var(--plat);color:#fff}
+.tick.locked{border-style:dashed}
+.row .t{font-size:13.5px;line-height:1.35;min-width:0}
+.row .t b{font-weight:600}
+.row .t .camo{font-family:var(--f-display);font-weight:600;font-size:14px}
+.row .t .camo.gold{color:var(--gold)} .row .t .camo.hb{color:var(--hb)}
+.row .t small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.row.on .t .ch{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.sep{height:1px;background:var(--line)}
+
+/* account sections */
+.sect h2{font-size:20px;text-transform:uppercase;padding-bottom:8px;border-bottom:2px solid var(--fg);margin-bottom:12px}
+.sect p.intro{margin:0 0 12px;color:var(--muted);max-width:65ch;font-size:14px}
+.tracks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.tracks{grid-template-columns:1fr}}
+.track{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.track h3{font-size:15px;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.track h3 .n{font-family:var(--f-mono);font-weight:500;font-size:12px;color:var(--muted)}
+.track .tick.on{background:var(--olive);border-color:var(--olive);color:var(--surface)}
+.gate{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--div-soft);border-radius:6px;padding:14px}
+.gate .row{flex:1 1 280px}
+.gate .tick.on{background:var(--div);border-color:var(--div);color:#fff}
+.gate .meter{font-size:13px}
+.notes{font-size:13px;color:var(--muted);max-width:72ch;display:flex;flex-direction:column;gap:8px}
+.notes a{color:var(--olive)}
+.reset{font-size:12px;font-weight:500;background:transparent;border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:4px;cursor:pointer}
+.confirm{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
+.confirm button{font-size:12px;font-weight:600;border-radius:4px;padding:5px 10px;cursor:pointer;border:1px solid var(--div);background:var(--div);color:#fff}
+.confirm button.no{background:transparent;color:var(--fg);border-color:var(--line)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+
+.bk{display:flex;flex-direction:column;gap:8px;max-width:520px}
+.bk textarea{width:100%;font:12px var(--f-mono);background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px;resize:vertical}
+.bk .reset{align-self:flex-start}
+.bkmsg{font-size:12.5px;color:var(--fg)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="titlerow">
+      <h1>MW4 <span>Camo</span> Tracker</h1>
+      <div class="save" id="save"></div>
+    </div>
+    <div class="ladder" id="ladder"></div>
+    <div class="controls" id="filters"></div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div id="classes" style="display:flex;flex-direction:column;gap:40px"></div>
+
+    <section class="sect">
+      <h2>Divergence</h2>
+      <p class="intro">Harmonic Break challenges appear once all 33 launch weapons have Platinum. Finish all 33 Harmonic Break challenges and Divergence unlocks, which opens the first Mastery camo in each mode.</p>
+      <div class="gate" id="gate"></div>
+    </section>
+
+    <section class="sect">
+      <h2>Mode Mastery</h2>
+      <p class="intro">Each mode has its own three-camo track, unlocked in order after Divergence. These count with any weapon or mix of weapons.</p>
+      <div class="tracks" id="tracks"></div>
+    </section>
+
+    <section class="sect">
+      <h2>Weapon Prestige</h2>
+      <p class="intro">A separate optional track per weapon once it reaches max level. It doesn't block anything above. Tick these for the weapon you're prestiging.</p>
+      <div class="tracks" id="prestige"></div>
+    </section>
+
+    <section class="sect notes">
+      <div>Challenge text is the Multiplayer version unless marked. DMZ counts AI kills with higher targets; Warzone usually halves the MP target. DMZ and Warzone versions are shown where a source published them. Weapon and Special progress is shared across all three modes.</div>
+      <div>Season 1 guns (Cronen Osprey, CSG-35) are tracked but not counted toward the 33-weapon gates, since Activision hasn't said whether they count. The JAK 12 and ZLR Talonhawk are left out until their challenges are published. A few published lines look odd (the VEL 46 has two prone-kill specials); they're shown as listed, so check the in-game text if one doesn't match.</div>
+      <div>Sources: <a href="https://gamerant.com/call-of-duty-cod-modern-warfare-4-mw4-all-mastery-camo-challenges-checklist/" target="_blank" rel="noopener">Game Rant</a> (military levels and specials), <a href="https://codmunity.gg/camo-tracker/mw4" target="_blank" rel="noopener">CODMunity</a> (DMZ/Warzone versions), <a href="https://metaradar.gg/modernwarfare4/camos" target="_blank" rel="noopener">MetaRadar</a> (Platinum and Harmonic Break by class), <a href="https://androidexperto.com/cod-mw4-camo-challenges-full-list-and-how-to-complete-them/" target="_blank" rel="noopener">Android Experto</a> (Activision's ladder and Sang 9mm examples), <a href="https://lfcarry.com/guides/warzone-empyros-camo" target="_blank" rel="noopener">LFCarry</a> (Warzone Mastery).</div>
+      <div class="bk" id="backup"></div>
+      <div id="resetwrap"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+/* ---------- data ---------- */
+const CLASSES = [
+  {id:"ar", name:"Assault Rifles", plat:["50 headshots","100 headshots"], hb:["25 double kills","50 double kills"]},
+  {id:"smg", name:"SMGs", plat:["25 kills from behind","75 kills from behind"], hb:["50 hipfire kills","100 hipfire kills"]},
+  {id:"sg", name:"Shotguns", plat:["50 hipfire kills","125 hipfire kills"], hb:["2 kills without reloading, 25 times","2 kills without reloading, 50 times"]},
+  {id:"lmg", name:"LMGs", plat:["3 kills without dying, 15 times","3 kills without taking damage, 50 times"], hb:["2 kills without releasing the trigger, 25 times","2 kills without releasing the trigger, 75 times"]},
+  {id:"mr", name:"Marksman Rifles", plat:["75 kills while prone","150 kills while prone"], hb:["75 one-shot kills","150 one-shot kills"]},
+  {id:"sr", name:"Sniper Rifles", plat:["75 kills while prone","150 kills while prone"], hb:["75 one-shot kills","150 one-shot kills"]},
+  {id:"pi", name:"Pistols", plat:["20 kills from behind","75 kills from behind"], hb:["40 hipfire kills","100 hipfire kills"]},
+  {id:"la", name:"Launchers", plat:["2 kills without taking damage, 15 times","2 kills without taking damage, 50 times"], hb:["10 kills in a match, 7 times","10 kills in a match, 15 times"], goldDmz:"50"},
+  {id:"me", name:"Melee", plat:["3 kills without dying, 15 times","3 kills without taking damage, 50 times"], hb:["25 kills from behind","75 kills from behind"]},
+];
+const L = [6,11,16,21,26,31,36,41]; // launchers & knife share this ladder
+// [name, class, military levels, [[camo, MP challenge, DMZ?, WZ?] ×3], season?]
+const RAW = [
+  ["Han 86","ar",[10,18,25,34,42,50,57,65],[["Smoke","20 mounted kills","75 mounted kills"],["Stormwave","50 kills with a suppressor","125 suppressed kills"],["Red","3 kills without dying, 15 times","3 kills without taking damage, 50 times"]]],
+  ["M4","ar",[10,18,26,35,39,44,51,59],[["Myriad","20 point-blank kills"],["Night Ops","20 mounted kills"],["Green","25 kills from behind"]]],
+  ["Hyeon Burst","ar",[10,17,26,32,40,49,55,63],[["Ponderosa","2 kills without reloading, 10 times"],["Red Rain","20 longshot kills"],["Kitty Kaos","100 kills in Full Auto"]]],
+  ["Patriot XMR","ar",[11,20,28,36,43,52,59,66],[["Dune Sea","20 hipfire kills"],["Scorch","50 kills with a suppressor"],["Disperse","30 longshot kills"]]],
+  ["Kastov 762","ar",[10,19,27,37,45,54,61,67],[["Samnim","3 kills without dying, 10 times"],["Raster Aux","20 longshot kills"],["Yellow","30 hipfire kills"]]],
+  ["Oden","ar",[12,21,25,33,39,46,53,59],[["Dark Moss","25 kills with the Miri 40mm grenade launcher"],["Shale","2 kills without reloading, 10 times"],["Hot Rod","100 kills while aiming down sights"]]],
+  ["Axion","ar",[10,19,26,34,41,48,55,62],[["Splinter Rock","20 longshot kills"],["Sunset Tropic","25 kills with the Miri 40mm grenade launcher"],["Cyan","2 kills without reloading, 25 times"]]],
+  ["Cronen Squall","ar",[10,17,24,31,39,45,54,60],[["Oni","20 point-blank kills"],["Urban Smoke","20 mounted kills"],["Optical Reverb","3 kills without dying, 15 times"]]],
+  ["Cronen Osprey","ar",[9,13,18,22,26,30,35,40],[["In The Weeds","20 hipfire kills"],["Dark Ichor","50 kills while aiming down sights"],["Chained","2 kills without reloading (count not yet published)"]],1],
+  ["ISO Nightshade","smg",[12,19,25,31,38,44,50,57],[["Asphalt","50 kills while aiming down sights","125 ADS kills","25 ADS kills"],["Black Topo","10 double kills","30 double kills","2 kills within 10 seconds, 5 times"],["Brown","3 kills without dying, 15 times","3 kills without taking damage, 50 times","10 longshot kills"]]],
+  ["VEL 46","smg",[9,15,22,28,33,40,47,54],[["Jungle Shadow","20 kills while prone"],["Ghast","20 kills while prone"],["Gunmetal","20 headshots"]]],
+  ["Wz.55 Striga","smg",[12,18,23,29,36,41,47,54],[["Stellation","50 kills with a suppressor"],["Rattlesnake","20 kills while jumping"],["Dark Tan","40 point-blank kills"]]],
+  ["PPSh-41","smg",[11,17,23,31,38,44,51,57],[["Blackwell","10 double kills"],["Iron","20 longshot kills"],["Currents","100 kills while aiming down sights"]]],
+  ["X-58 Nyx","smg",[9,15,20,25,29,35,42,47],[["Sniper Veil","20 kills while moving"],["Carbonated","20 longshot kills"],["Lime","40 headshots"]]],
+  ["CSG-35","smg",[9,13,18,22,26,30,35,40],[["Polyhedron","3 kills without dying, 20 times"],["Rind","50 kills with a suppressor"],["Black Grip","50 kills while moving"]],1],
+  ["Rezi 12","sg",[11,18,26,30,38,42,47,54],[["Struck Oil","20 point-blank kills","75 point-blank kills","10 point-blank kills"],["Brushstroke","10 longshot kills","50 longshot kills","5 longshot kills"],["White Pine","40 kills while jumping","100 kills while jumping","20 kills while jumping"]]],
+  ["Warlord","sg",[13,19,25,30,37,43,49,55],[["Redshift","20 kills while moving"],["Corrupted Clay","10 double kills"],["Magma Ire","50 kills while prone"]]],
+  ["FiNN LMG","lmg",[12,18,24,31,37,42,48,53],[["Desert Tactics","20 point-blank kills","75 point-blank kills","10 point-blank kills"],["Green Tiger","2 kills without reloading, 10 times","2 kills without reloading, 30 times","2 kills without reloading, 5 times"],["Thunderhead","30 longshot kills","100 longshot kills","15 longshot kills"]]],
+  ["Type 73","lmg",[12,19,26,34,41,48,55,61],[["Ash Pine","20 mounted kills"],["Outcrop","10 double kills"],["Foxtrail","40 headshots"]]],
+  ["APOC-338","lmg",[9,15,22,26,33,40,44,51],[["Phantom Flux","20 hipfire kills"],["Mineral","20 longshot kills"],["Tiger Swipe","100 kills while prone"]]],
+  ["MAR-9","mr",[10,19,29,38,45,52,58,69],[["Mangrove","20 mounted kills","75 mounted kills","10 mounted kills"],["Fungal Grid","25 kills while crouched","75 kills while crouched","15 kills while crouched"],["White","30 longshot kills","100 longshot kills","15 longshot kills"]]],
+  ["Oris 8.6","mr",[11,18,27,33,42,49,55,61],[["Hibiscus","10 quickscope kills"],["Fire Topo","20 double kills"],["Deep Space","3 kills without dying, 15 times"]]],
+  ["Mosin-Nagant","mr",[10,17,25,31,38,47,55,61],[["Ice Sheer","25 headshots"],["Fractal Snow","3 kills without dying, 15 times"],["Sticker Shock","20 headshots"]]],
+  ["KG-7 Vulcan","sr",[13,22,31,38,47,54,61,69],[["Treeline","10 hipfire kills","25 hipfire kills","5 hipfire kills"],["Spidersilk","20 headshots","75 headshots","10 headshots"],["Tension","2 kills without taking damage, 20 times","2 kills without taking damage, 30 times","2 kills without taking damage, 10 times"]]],
+  ["Astaroth .57","sr",[10,15,20,26,32,37,42,48],[["Dry Brush","3 kills without dying, 10 times"],["Backcountry","20 mounted kills"],["Dread Plague","2 kills within 5 seconds, 20 times"]]],
+  ["Signal 50","sr",[10,18,28,35,43,52,57,67],[["Anaconda","2 kills within 5 seconds, 10 times"],["Ripplewave","20 quickscope kills"],["Sunburn","40 longshot kills"]]],
+  ["Sang 9mm","pi",[9,13,17,21,25,28,31,35],[["Autumn","25 kills while aiming down sights","75 ADS kills","15 ADS kills"],["Snakeskin","3 kills without dying, 5 times","3 kills without taking damage, 15 times","3 kills without dying, 3 times"],["Space Time","50 kills with Akimbo","125 Akimbo kills","25 Akimbo kills"]]],
+  ["Krait P68","pi",[10,14,18,22,25,28,32,35],[["Off Grid","15 kills while ledge hanging"],["Urban Flamingo","15 point-blank kills"],["Smokescreen","50 kills with a suppressor"]]],
+  [".50 GS","pi",[10,16,22,28,32,36,40,46],[["Frosted","20 headshots"],["Splatter Ops","7 double kills"],["Red Tiger","30 point-blank kills"]]],
+  ["Mojave .357","pi",[9,13,18,22,26,30,35,40],[["Miami","20 headshots"],["Wallpaper","7 double kills"],["Garland","30 point-blank kills"]]],
+  ["PILA","la",L,[["Frontier","10 direct-hit kills"],["Sandwash","5 double kills"],["Digital Fall","Destroy 30 killstreaks or vehicles"]]],
+  ["RPG-8","la",L,[["Digi Bark","10 direct-hit kills"],["Stone Bits","5 double kills"],["Bubblegum Ops","Destroy 30 killstreaks or vehicles"]]],
+  ["JOKR","la",L,[["Thicket","10 direct-hit kills"],["Tectonic","5 double kills"],["Blue Tiger","Destroy 30 killstreaks or vehicles"]]],
+  ["PM-40 Anvil","la",L,[["Night Snow","10 direct-hit kills"],["Recursive","5 double kills"],["Urban Standard","Destroy 30 killstreaks or vehicles"]]],
+  ["FSS Carbon Edge 1095","me",L,[["Raster Lite","25 kills while jumping"],["Stockpile","25 heavy melee finisher kills"],["Deathbed","2 kills within 5 seconds, 25 times"]]],
+];
+const CL = Object.fromEntries(CLASSES.map(c=>[c.id,c]));
+const WEAPONS = RAW.map(([name,cid,lv,sp,season])=>({id:(cid+"-"+name).toLowerCase().replace(/[^a-z0-9]+/g,"-"), name, cls:CL[cid], lv, sp, season:!!season}));
+const LAUNCH = WEAPONS.filter(w=>!w.season);
+
+const TRACKS = [
+  {name:"Multiplayer", items:[
+    ["mp1","Mercurial Drift","10 kills in a match, 250 times"],
+    ["mp2","Polyatomic Reforged","3 kills without taking damage, 300 times"],
+    ["mp3","Orion Reforged","5 kills without dying, 500 times"]]},
+  {name:"DMZ", items:[
+    ["dmz1","Chiral","2,500 kills on Tier 3+ enemies"],
+    ["dmz2","Ripple Tide","Exfil 2 LT dog tags in one deployment, 50 times"],
+    ["dmz3","Helio","25,000 Legendary Weapon kills on a Max Level Operator"]]},
+  {name:"Warzone", items:[
+    ["wz1","Parallax","5 kills in a match, 300 times"],
+    ["wz2","Damascus Reforged","2 kills without plating, 200 times"],
+    ["wz3","Empyros","Top 5 with 6+ kills, 75 times"]]},
+];
+const PRESTIGE = [{name:"Pyroclast set", items:[
+  ["py1","Pyroclast","Reach Weapon Prestige 1"],
+  ["py2","Pyroclast Terminus","Reach max level of Weapon Prestige 1"],
+  ["py3","Pyroclast Scatter","Prestige Master level 150"],
+  ["py4","Pyroclast Cascade","Prestige Master level 250"]]}];
+
+/* ---------- state ---------- */
+let checks = {};
+let filter = "all";
+let hideDone = false;
+const LS = "mw4-camo-checks";
+try { const s = localStorage.getItem(LS); if (s) checks = JSON.parse(s) || {}; } catch(e) {}
+try { const f = JSON.parse(localStorage.getItem("mw4-camo-ui")||"{}"); filter = f.filter||"all"; hideDone = !!f.hideDone; } catch(e) {}
+
+const on = k => !!checks[k];
+const milCount = w => [1,2,3,4,5,6,7,8].filter(i=>on(w.id+":m"+i)).length;
+const specCount = w => [1,2,3].filter(i=>on(w.id+":s"+i)).length;
+const classLaunch = c => LAUNCH.filter(w=>w.cls===c);
+const classGoldAll = c => classLaunch(c).every(w=>on(w.id+":gold"));
+const allPlat = () => CLASSES.every(c=>on("plat:"+c.id));
+const hbCount = () => LAUNCH.filter(w=>on(w.id+":hb")).length;
+const goldText = c => "15 kills in one match";
+const goldSub = c => "DMZ: "+(c.goldDmz||"100")+" kills in one match · Warzone: 8";
+
+function nextStep(w){
+  const m = milCount(w), s = specCount(w);
+  if (m < 8) return ["Level up", "Military "+(m+1)+" at weapon level "+w.lv[m]];
+  if (s < 3) return [w.sp[s][0], w.sp[s][1]];
+  if (!on(w.id+":gold")) return ["Gold", goldText(w.cls)];
+  if (!on("plat:"+w.cls.id)) return classGoldAll(w.cls) ? ["Platinum", w.cls.plat[0]] : ["Waiting", "Gold the rest of the class"];
+  if (!on(w.id+":hb")) return allPlat() ? ["Harmonic Break", w.cls.hb[0]] : ["Waiting", "Platinum on all 33 weapons"];
+  return ["Done", "Ready for Divergence"];
+}
+const weaponDone = w => on(w.id+":hb");
+
+/* ---------- render helpers ---------- */
+const $ = id => document.getElementById(id);
+function el(tag, attrs={}, kids=[]){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)){
+    if (k==="class") e.className=v; else if (k==="text") e.textContent=v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k,v);
+  }
+  (Array.isArray(kids)?kids:[kids]).forEach(c=>c!=null&&e.append(c));
+  return e;
+}
+function toggle(k){ if (checks[k]) delete checks[k]; else checks[k]=true; changed(); }
+function tick(k, label, kind="", locked=false){
+  return el("button",{class:"tick"+(kind?" "+kind:"")+(on(k)?" on":"")+(locked&&!on(k)?" locked":""),type:"button","aria-pressed":String(on(k)),"aria-label":label,onclick:()=>toggle(k)},on(k)?"✓":"");
+}
+function row(k, label, camo, camoCls, challenge, sub, kind, locked){
+  return el("div",{class:"row"+(on(k)?" on":"")},[
+    tick(k,label,kind,locked),
+    el("div",{class:"t"},[
+      el("span",{class:"camo"+(camoCls?" "+camoCls:""),text:camo}), " · ",
+      el("span",{class:"ch",text:challenge}),
+      sub?el("small",{text:sub}):null
+    ])
+  ]);
+}
+
+function renderLadder(){
+  const total = LAUNCH.length;
+  const milDone = LAUNCH.filter(w=>milCount(w)===8 && specCount(w)===3).length;
+  const gold = LAUNCH.filter(w=>on(w.id+":gold")).length;
+  const plat = CLASSES.filter(c=>on("plat:"+c.id)).length;
+  const rows = [
+    ["r-mil","Military + Special",milDone,total],
+    ["r-gold","Gold",gold,total],
+    ["r-plat","Platinum classes",plat,CLASSES.length],
+    ["r-hb","Harmonic Break",hbCount(),total],
+  ];
+  $("ladder").replaceChildren(...rows.map(([c,l,n,t])=>{
+    const bar = el("div",{class:"bar"},el("i")); bar.firstChild.style.width=(n/t*100)+"%";
+    return el("div",{class:"rung "+c},[el("div",{class:"lab"},[el("span",{text:l}),el("span",{class:"n",text:n+"/"+t})]),bar]);
+  }));
+}
+
+function renderFilters(){
+  const opts = [["all","All"],...CLASSES.map(c=>[c.id,c.name])];
+  const chips = opts.map(([id,l])=>el("button",{class:"chip",type:"button","aria-pressed":String(filter===id),onclick:()=>{filter=id;saveUI();render();}},l));
+  const hide = el("button",{class:"chip",type:"button","aria-pressed":String(hideDone),onclick:()=>{hideDone=!hideDone;saveUI();render();}},"Hide finished guns");
+  $("filters").replaceChildren(...chips, el("span",{class:"spacer"}), hide);
+}
+function saveUI(){ try{localStorage.setItem("mw4-camo-ui",JSON.stringify({filter,hideDone}));}catch(e){} }
+
+function weaponCard(w){
+  const c = w.cls;
+  const pips = el("div",{class:"pips"}, w.lv.map((lv,i)=>{
+    const k=w.id+":m"+(i+1);
+    return el("button",{class:"pip"+(on(k)?" on":""),type:"button","aria-pressed":String(on(k)),"aria-label":w.name+" Military "+(i+1)+", weapon level "+lv,title:"Military "+(i+1)+": reach weapon level "+lv,onclick:()=>toggle(k)},[el("small",{text:"LV"}),el("span",{text:String(lv)})]);
+  }));
+  const specs = w.sp.map(([camo,mp,dmz,wz],i)=>{
+    const sub = [dmz?"DMZ: "+dmz:null, wz?"Warzone: "+wz:null].filter(Boolean).join(" · ");
+    return row(w.id+":s"+(i+1), w.name+" "+camo, camo, "", mp, sub, "", false);
+  });
+  const goldReady = milCount(w)===8 && specCount(w)===3;
+  const [a,b] = nextStep(w);
+  return el("article",{class:"card"+(weaponDone(w)?" done":"")},[
+    el("div",{class:"chead"},[
+      el("div",{class:"wname"},[w.name, w.season?el("span",{class:"tag",text:"Season 1"}):null]),
+      el("div",{class:"next"},[el("b",{text:a+": "}),b])
+    ]),
+    el("div",{class:"grp"},[el("div",{class:"label",text:"Military · reach weapon level"}),pips]),
+    el("div",{class:"grp"},[el("div",{class:"label",text:"Special"}),...specs]),
+    el("div",{class:"sep"}),
+    row(w.id+":gold", w.name+" Gold", "Gold", "gold", goldText(c), goldSub(c), "gold", !goldReady),
+    row(w.id+":hb", w.name+" Harmonic Break", "Harmonic Break", "hb", c.hb[0], "DMZ: "+c.hb[1]+(w.season?" · Season 1 gun, may not be required":""), "hb", !allPlat()),
+  ]);
+}
+
+function renderClasses(){
+  const out = [];
+  CLASSES.forEach(c=>{
+    if (filter!=="all" && filter!==c.id) return;
+    const ws = WEAPONS.filter(w=>w.cls===c);
+    const launch = classLaunch(c);
+    const shown = hideDone ? ws.filter(w=>!weaponDone(w)) : ws;
+    const goldN = launch.filter(w=>on(w.id+":gold")).length;
+    const pk = "plat:"+c.id, ready = classGoldAll(c);
+    const platSub = on(pk) ? "Unlocked on every "+c.name.replace(/s$/,"").toLowerCase()
+      : ready ? "Ready: every launch gun here has Gold"
+      : "Needs Gold on all "+launch.length+" launch guns ("+goldN+" done)";
+    out.push(el("section",{class:"cls"},[
+      el("div",{class:"clshead"},[
+        el("div",{class:"clstop"},[el("h2",{text:c.name}),el("div",{class:"count mono",text:goldN+"/"+launch.length+" Gold"})]),
+        el("div",{class:"gates"},[
+          el("div",{class:"gatebox plat"},[
+            tick(pk,c.name+" Platinum","plat",!ready),
+            el("div",{},[el("b",{text:"Platinum · "}),c.plat[0],el("small",{text:"DMZ: "+c.plat[1]+" · "+platSub})])
+          ]),
+          el("div",{class:"gatebox hbinfo"},[
+            el("div",{},[el("b",{text:"Harmonic Break · "}),c.hb[0],el("small",{text:"DMZ: "+c.hb[1]+" · opens after Platinum on all 33"})])
+          ])
+        ])
+      ]),
+      el("div",{class:"cards"}, shown.map(weaponCard)),
+      shown.length===0?el("div",{class:"next",text:"Every gun in this class is through Harmonic Break."}):null
+    ]));
+  });
+  $("classes").replaceChildren(...out);
+}
+
+function trackRow([k,name,req]){ return row(k,name,name,"",req,"","",false); }
+function renderGate(){
+  $("gate").replaceChildren(
+    row("div","Divergence","Divergence","","Complete all 33 Harmonic Break challenges","","",hbCount()<33),
+    el("div",{class:"meter mono",text:"Harmonic Break "+hbCount()+"/33 · Platinum "+CLASSES.filter(c=>on("plat:"+c.id)).length+"/9 classes"})
+  );
+}
+function renderTracks(id, list){
+  $(id).replaceChildren(...list.map(t=>{
+    const n = t.items.filter(i=>on(i[0])).length;
+    return el("div",{class:"track"},[el("h3",{},[el("span",{text:t.name}),el("span",{class:"n",text:n+"/"+t.items.length})]),...t.items.map(trackRow)]);
+  }));
+}
+function render(){
+  renderLadder(); renderFilters(); renderClasses(); renderGate();
+  renderTracks("tracks",TRACKS); renderTracks("prestige",PRESTIGE);
+}
+
+function showResetButton(){
+  $("resetwrap").replaceChildren(el("button",{class:"reset",id:"reset",type:"button",onclick:showResetConfirm},"Reset all progress"));
+}
+function showResetConfirm(){
+  $("resetwrap").replaceChildren(el("span",{class:"confirm"},[
+    "Clear every checkbox?",
+    el("button",{type:"button",onclick:()=>{checks={};changed();showResetButton();}},"Clear all"),
+    el("button",{class:"no",type:"button",onclick:showResetButton},"Cancel")
+  ]));
+}
+showResetButton();
+
+/* ---------- persistence (on this phone) ---------- */
+function setStatus(t){ $("save").textContent = t; }
+function changed(){
+  try{ localStorage.setItem(LS, JSON.stringify(checks)); setStatus("Saved on this device"); }
+  catch(e){ setStatus("Couldn't save. Is private browsing on?"); }
+  render();
+}
+render();
+setStatus(Object.keys(checks).length ? "Saved on this device" : "Ticks save on this device");
+
+/* backup / restore */
+function showBackup(){
+  const box = $("backup");
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(checks))));
+  const out = el("textarea",{id:"bk-out",readonly:"",rows:"3"}); out.value = code;
+  const msg = el("div",{class:"bkmsg",id:"bk-msg"});
+  const copy = el("button",{type:"button",class:"reset",onclick:async()=>{
+    try{ await navigator.clipboard.writeText(code); msg.textContent="Copied. Paste it into Notes or a message to yourself."; }
+    catch(e){ out.focus(); out.select(); msg.textContent="Select the text above and copy it."; }
+  }},"Copy backup code");
+  const inp = el("textarea",{id:"bk-in",rows:"3",placeholder:"Paste a backup code here"});
+  const restore = el("button",{type:"button",class:"reset",onclick:()=>{
+    try{
+      const data = JSON.parse(decodeURIComponent(escape(atob(inp.value.trim()))));
+      if (typeof data!=="object"||Array.isArray(data)) throw 0;
+      checks = data; changed(); msg.textContent="Restored "+Object.keys(checks).length+" ticks.";
+    }catch(e){ msg.textContent="That code didn't work. Copy the whole code and try again."; }
+  }},"Restore from code");
+  box.replaceChildren(
+    el("div",{class:"label",text:"Back up"}), out, copy,
+    el("div",{class:"label",text:"Restore"}), inp, restore, msg
+  );
+}
+showBackup();
+const _changed = changed;
+changed = function(){ _changed(); showBackup(); };
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+
+</body>
+</html>
